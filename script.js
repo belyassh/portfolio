@@ -56,29 +56,58 @@ window.addEventListener('scroll', () => {
     lastScroll = currentScroll;
 });
 
+// Initialize EmailJS
+// Replace 'YOUR_PUBLIC_KEY' with your EmailJS public key
+// Get it from: https://dashboard.emailjs.com/admin/integration
+if (typeof emailjs !== 'undefined') {
+    emailjs.init('7NhVuB5A2LoE5hsvi'); // Replace with your EmailJS public key
+}
+
 // Form submission handler
 const contactForm = document.querySelector('.contact-form');
 if (contactForm) {
-    contactForm.addEventListener('submit', (e) => {
+    contactForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         
         // Get form values
-        const formData = new FormData(contactForm);
         const name = contactForm.querySelector('input[type="text"]').value;
         const email = contactForm.querySelector('input[type="email"]').value;
         const message = contactForm.querySelector('textarea').value;
         
-        // Simple validation feedback
+        // Get submit button for feedback
         const submitButton = contactForm.querySelector('button[type="submit"]');
         const originalText = submitButton.textContent;
+        const originalBackground = submitButton.style.background;
         
+        // Show loading state
         submitButton.textContent = 'Sending...';
         submitButton.disabled = true;
+        submitButton.style.opacity = '0.7';
         
-        // Simulate form submission (replace with actual form handling)
-        setTimeout(() => {
+        try {
+            // Check if EmailJS is configured
+            if (typeof emailjs === 'undefined' || emailjs.init.toString().includes('YOUR_PUBLIC_KEY')) {
+                // Fallback: Show demo message if EmailJS not configured
+                throw new Error('EmailJS not configured. Please set up your EmailJS credentials.');
+            }
+            
+            // Send email using EmailJS
+            // Replace 'YOUR_SERVICE_ID', 'YOUR_TEMPLATE_ID' with your actual IDs
+            const response = await emailjs.send(
+                'web-design',    // Replace with your EmailJS Service ID
+                'template_d3iqmz4',   // Replace with your EmailJS Template ID
+                {
+                    from_name: name,
+                    from_email: email,
+                    message: message,
+                    to_email: 'nikitahill099@gmail.com' // Your email address
+                }
+            );
+            
+            // Success feedback
             submitButton.textContent = 'Message Sent! ✓';
             submitButton.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+            submitButton.style.opacity = '1';
             
             // Reset form
             contactForm.reset();
@@ -87,9 +116,42 @@ if (contactForm) {
             setTimeout(() => {
                 submitButton.textContent = originalText;
                 submitButton.disabled = false;
-                submitButton.style.background = '';
+                submitButton.style.background = originalBackground;
             }, 3000);
-        }, 1500);
+            
+        } catch (error) {
+            console.error('Error sending email:', error);
+            
+            // Error feedback
+            submitButton.textContent = 'Error - Try Again';
+            submitButton.style.background = 'linear-gradient(135deg, #ef4444, #dc2626)';
+            submitButton.style.opacity = '1';
+            submitButton.disabled = false;
+            
+            // Show error message to user
+            let errorMsg = document.querySelector('.form-error');
+            if (!errorMsg) {
+                errorMsg = document.createElement('div');
+                errorMsg.className = 'form-error';
+                errorMsg.style.cssText = 'color: #ef4444; text-align: center; margin-top: 15px; padding: 10px; background: rgba(239, 68, 68, 0.1); border-radius: 10px;';
+                contactForm.appendChild(errorMsg);
+            }
+            
+            if (error.message.includes('not configured')) {
+                errorMsg.textContent = '⚠️ Email service not configured. Please contact me directly or set up EmailJS.';
+            } else {
+                errorMsg.textContent = '⚠️ Failed to send message. Please try again or contact me directly.';
+            }
+            
+            // Remove error message after 5 seconds
+            setTimeout(() => {
+                if (errorMsg) {
+                    errorMsg.remove();
+                }
+                submitButton.textContent = originalText;
+                submitButton.style.background = originalBackground;
+            }, 5000);
+        }
     });
 }
 
